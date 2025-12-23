@@ -1,25 +1,40 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Student, StudentDocument } from './student.schema';
+import { Student, StudentDocument } from './schemas/student.schema';
 import { Model } from 'mongoose';
+import { Courses } from './schemas/courses.schema';
 
 @Injectable()
 export class StudentService {
     constructor(
-        @InjectModel(Student.name) private studentModel: Model<StudentDocument>
+        @InjectModel(Student.name) private studentModel: Model<StudentDocument>,
+        @InjectModel(Courses.name) private courseModel: Model<Courses>,
     ) {}
 
     async createStudent(data: Partial<Student>) : Promise<Student> {
-        const newStudent = new this.studentModel(data);
+        // Create two courses
+        const course1 = await new this.courseModel({
+            courseId: 'C001',
+            title: 'Mathematics'
+        }).save();
+        const course2 = await new this.courseModel({
+            courseId: 'C002',
+            title: 'Physics'
+        }).save();
+        
+        const newStudent = new this.studentModel({
+            ...data,
+            courses : [course1._id, course2._id]
+        });
         return newStudent.save();
     }
 
     async getAllStudents() : Promise<Student[]> {
-        return this.studentModel.find().exec();
+        return this.studentModel.find().populate('courses').exec();
     }
 
     async getStudentById(id : string) : Promise<Student | null> {
-        return this.studentModel.findById(id).exec();
+        return this.studentModel.findById(id).populate('courses').exec();
     }
 
     async updateStudent(id : string, data : Partial<Student>) : Promise<Student | null> {
